@@ -1,9 +1,19 @@
 from services.gambler_service import create_gambler, get_gambler_profile
 from services.betting_preferences_service import create_preferences
 from services.session_service import start_session
-from services.session_runner import run_session
 from services.bet_service import place_bet
+from strategies.fixed_strategy import FixedAmountStrategy
 from utils.stake_history import print_stake_history
+
+# NEW
+from services.run_session_with_strategy import run_session_with_strategy
+
+# from strategies. import FixedAmountStrategy
+from strategies.percentage_strategy import PercentageStrategy
+from strategies.martingale_strategy import MartingaleStrategy
+from strategies.reverse_martingale_strategy import ReverseMartingaleStrategy
+from strategies.fibonacci_strategy import FibonacciStrategy
+from strategies.dalembert_strategy import DAlembertStrategy
 
 
 def main():
@@ -69,10 +79,12 @@ def main():
     # -----------------------------
     # MODE SELECTION
     # -----------------------------
-    mode = input("\nChoose mode (1 = manual, 2 = auto): ")
+    mode = input("\nChoose mode (1 = manual, 2 = strategy): ")
 
+    # =============================
+    # MANUAL MODE
+    # =============================
     if mode == "1":
-        # Manual mode
         while True:
             try:
                 bet = float(input("Enter bet amount (or 0 to exit): "))
@@ -86,16 +98,61 @@ def main():
                 if status == "STOP":
                     print("Session ended")
                     break
-                print_stake_history(session_id)
+
             except Exception as e:
                 print("Error:", e)
                 break
+
+        # ✅ print once
         print_stake_history(session_id)
-            
+
+    # =============================
+    # STRATEGY MODE
+    # =============================
     else:
-        # Auto-play
-        bet_amount = float(input("Enter fixed bet amount: "))
-        run_session(gambler_id, bet_amount)
+        print("\nChoose Strategy:")
+        print("1. Fixed")
+        print("2. Percentage")
+        print("3. Martingale")
+        print("4. Reverse Martingale")
+        print("5. Fibonacci")
+        print("6. D'Alembert")
+
+        choice = input("Enter choice: ")
+
+        if choice == "1":
+            amt = float(input("Enter fixed amount: "))
+            strategy = FixedAmountStrategy(amt)
+
+        elif choice == "2":
+            percent = float(input("Enter percentage: "))
+            strategy = PercentageStrategy(percent)
+
+        elif choice == "3":
+            base = float(input("Enter base amount: "))
+            strategy = MartingaleStrategy(base)
+
+        elif choice == "4":
+            base = float(input("Enter base amount: "))
+            strategy = ReverseMartingaleStrategy(base)
+
+        elif choice == "5":
+            base = float(input("Enter base amount: "))
+            strategy = FibonacciStrategy(base)
+
+        elif choice == "6":
+            base = float(input("Enter base amount: "))
+            strategy = DAlembertStrategy(base)
+
+        else:
+            print("Invalid choice")
+            return
+
+        # run strategy session
+        run_session_with_strategy(gambler_id, strategy)
+
+        # print history after session
+        print_stake_history(session_id)
 
 
 if __name__ == "__main__":

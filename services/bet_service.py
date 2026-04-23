@@ -135,7 +135,10 @@ def place_bet(gambler_id, amount):
 
         print(f"🎲 {result} | Stake: {new_stake}")
 
-        return "STOP" if stop_reason else "CONTINUE"
+        return {
+            "result": result,          # WIN / LOSS
+            "stop": True if stop_reason else False
+        }
 
     except Exception as e:
         conn.rollback()

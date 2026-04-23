@@ -52,3 +52,92 @@ def start_session(gambler_id, current_stake, max_games=None):
     finally:
         cursor.close()
         conn.close()
+
+
+from repositories.pause_repo import create_pause_record
+from config.db_config import get_connection
+
+
+def pause_session(session_id, reason="USER"):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT status FROM sessions WHERE session_id = %s", (session_id,))
+    session = cursor.fetchone()
+
+    if not session:
+        print("Session not found")
+        return
+
+    if session["status"] == "PAUSED":
+        print("Already paused")
+        return
+
+    cursor.execute("""
+        UPDATE sessions
+        SET status = 'PAUSED'
+        WHERE session_id = %s
+    """, (session_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    create_pause_record(session_id, reason)
+
+    print("⏸ Session paused")
+
+
+
+from repositories.pause_repo import close_pause_record
+from config.db_config import get_connection
+
+def resume_session(session_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT status FROM sessions WHERE session_id = %s", (session_id,))
+    session = cursor.fetchone()
+
+    if not session:
+        print("Session not found")
+        return
+
+    if session["status"] != "PAUSED":
+        print("Session is not paused")
+        return
+
+    cursor.execute("""
+        UPDATE sessions
+        SET status = 'ACTIVE'
+        WHERE session_id = %s
+    """, (session_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    close_pause_record(session_id)
+    print("▶️ Session resumed")
+
+
+from repositories.session_repo import end_session as end_session_repo
+from repositories.gambler_repo import get_gambler_by_id
+
+
+def close_session(session_id, gambler_id=None):
+    """
+    Close session manually
+    """
+
+    # if gambler_id is provided → get latest stake
+    ending_stake = None
+
+    if gambler_id:
+        gambler = get_gambler_by_id(gambler_id)
+        if gambler:
+            ending_stake = float(gambler["current_stake"])
+
+    # fallback: repo handles None safely (or DB default)
+    end_session_repo(session_id, ending_stake, "MANUAL")
+
+    print("🛑 Session closed manually")

@@ -4,31 +4,38 @@ from config.db_config import get_connection
 def create_session(session, conn=None):
     close_conn = False
 
-    if conn is None:
+    if not conn:
         conn = get_connection()
         close_conn = True
 
     cursor = conn.cursor()
 
     query = """
-        INSERT INTO sessions (
-            gambler_id, starting_stake, ending_stake,
-            peak_stake, lowest_stake,
-            max_games, games_played, status
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, 0, 'ACTIVE')
+    INSERT INTO sessions (
+        gambler_id,
+        starting_stake,
+        peak_stake,
+        lowest_stake,
+        games_played,
+        max_games,
+        status,
+        created_at,
+        started_at
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, 'ACTIVE', NOW(), NOW())
     """
 
     values = (
         session.gambler_id,
         session.starting_stake,
-        session.starting_stake,
-        session.starting_stake,
-        session.starting_stake,
+        session.starting_stake,  # initial peak
+        session.starting_stake,  # initial lowest
+        0,
         session.max_games
     )
 
     cursor.execute(query, values)
+
     session_id = cursor.lastrowid
 
     if close_conn:
@@ -37,6 +44,8 @@ def create_session(session, conn=None):
         conn.close()
 
     return session_id
+
+
 
 def get_active_session(gambler_id):
     conn = get_connection()

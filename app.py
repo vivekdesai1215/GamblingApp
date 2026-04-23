@@ -1,14 +1,16 @@
 from services.gambler_service import create_gambler, get_gambler_profile
 from services.betting_preferences_service import create_preferences
-from services.session_service import start_session
+from services.session_service import start_session, pause_session, resume_session,close_session
 from services.bet_service import place_bet
-from strategies.fixed_strategy import FixedAmountStrategy
+from strategies.report_service import print_session_summary
 from utils.stake_history import print_stake_history
 
-# NEW
+
+# Strategy runner
 from services.run_session_with_strategy import run_session_with_strategy
 
-# from strategies. import FixedAmountStrategy
+# Strategies
+from strategies.fixed_strategy import FixedAmountStrategy
 from strategies.percentage_strategy import PercentageStrategy
 from strategies.martingale_strategy import MartingaleStrategy
 from strategies.reverse_martingale_strategy import ReverseMartingaleStrategy
@@ -82,32 +84,46 @@ def main():
     mode = input("\nChoose mode (1 = manual, 2 = strategy): ")
 
     # =============================
-    # MANUAL MODE
+    # MANUAL MODE (UPDATED)
     # =============================
     if mode == "1":
         while True:
             try:
-                bet = float(input("Enter bet amount (or 0 to exit): "))
+                action = input("\nEnter bet(enter bet amount) / 'pause' / 'resume' / 'exit' : ")
 
-                if bet == 0:
-                    print("Exiting manual mode")
+                # EXIT
+                if action.lower() == "exit":
+                    close_session(session_id)
+                    print("🛑 Session ended manually")
                     break
 
-                status = place_bet(gambler_id, bet)
+                # PAUSE
+                elif action.lower() == "pause":
+                    pause_session(session_id)
 
-                if status == "STOP":
-                    print("Session ended")
-                    break
+                # RESUME
+                elif action.lower() == "resume":
+                    resume_session(session_id)
+
+                # BET
+                else:
+                    bet = float(action)
+
+                    status = place_bet(gambler_id, bet)
+
+                    if status["stop"]:
+                        print("🛑 Session ended")
+                        break
 
             except Exception as e:
                 print("Error:", e)
                 break
-
-        # ✅ print once
+        
         print_stake_history(session_id)
+        print_session_summary(session_id)
 
     # =============================
-    # STRATEGY MODE
+    # STRATEGY MODE (UPDATED)
     # =============================
     else:
         print("\nChoose Strategy:")
@@ -148,12 +164,11 @@ def main():
             print("Invalid choice")
             return
 
-        # run strategy session
-        run_session_with_strategy(gambler_id, strategy)
+        # run strategy session (IMPORTANT: pass session_id)
+        run_session_with_strategy(gambler_id, strategy, session_id)
 
-        # print history after session
         print_stake_history(session_id)
-
+        print_session_summary(session_id)
 
 if __name__ == "__main__":
     main()

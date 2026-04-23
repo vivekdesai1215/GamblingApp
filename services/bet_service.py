@@ -4,7 +4,7 @@ from config.db_config import get_connection
 from repositories.stake_transaction_repo import insert_stake_transaction
 from utils.transation_type import TransactionType
 
-
+# Places a Bet
 def place_bet(gambler_id, amount,outcome_strategy,odds_strategy):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -133,7 +133,7 @@ def place_bet(gambler_id, amount,outcome_strategy,odds_strategy):
 
         conn.commit()
 
-        print(f"🎲 {result} | Stake: {new_stake}")
+        print(f" {result} | Stake: {new_stake}")
 
         return {
             "result": result,

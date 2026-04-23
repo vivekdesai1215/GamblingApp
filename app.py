@@ -3,6 +3,7 @@ from services.betting_preferences_service import create_preferences
 from services.session_service import start_session
 from services.session_runner import run_session
 from services.bet_service import place_bet
+from utils.stake_history import print_stake_history
 
 
 def main():
@@ -59,7 +60,7 @@ def main():
     # -----------------------------
     # START SESSION
     # -----------------------------
-    start_session(
+    session_id = start_session(
         gambler_id=gambler_id,
         current_stake=gambler["current_stake"],
         max_games=max_games
@@ -85,11 +86,12 @@ def main():
                 if status == "STOP":
                     print("Session ended")
                     break
-
+                print_stake_history(session_id)
             except Exception as e:
                 print("Error:", e)
                 break
-
+        print_stake_history(session_id)
+            
     else:
         # Auto-play
         bet_amount = float(input("Enter fixed bet amount: "))

@@ -1,48 +1,54 @@
-# from models.session import Session
 from models.sessions import Session
 from repositories.session_repo import create_session, get_active_session
+from repositories.stake_transaction_repo import insert_stake_transaction
+from utils.transation_type import TransactionType
+from config.db_config import get_connection
 
 
 def start_session(gambler_id, current_stake, max_games=None):
-    # Check if already active
+
+    # 1. Check active session
     existing = get_active_session(gambler_id)
     if existing:
         raise ValueError("Active session already exists")
 
-    session = Session(
-        gambler_id=gambler_id,
-        starting_stake=current_stake,
-        max_games=max_games
-    )
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    session_id = create_session(session)
+    try:
+        conn.start_transaction()
 
-    print(f"✅ Session started: {session_id}")
-    return session_id
+        # 2. Create session
+        session = Session(
+            gambler_id=gambler_id,
+            starting_stake=current_stake,
+            max_games=max_games
+        )
 
-from repositories.session_repo import update_session
+        session_id = create_session(session, conn=conn)  # pass conn
 
+        # 3. Insert INITIAL stake transaction
+        insert_stake_transaction(
+            gambler_id=gambler_id,
+            session_id=session_id,
+            bet_id=None,
+            transaction_type=TransactionType.INITIAL,
+            amount=current_stake,
+            balance_before=0,
+            balance_after=current_stake,
+            conn=conn
+        )
 
-def update_session_after_bet(session, current_stake):
-    peak = session["peak_stake"]
-    lowest = session["lowest_stake"]
+        conn.commit()
 
-    if current_stake > peak:
-        peak = current_stake
+        print(f"✅ Session started: {session_id}")
+        return session_id
 
-    if current_stake < lowest:
-        lowest = current_stake
+    except Exception as e:
+        conn.rollback()
+        print("❌ Session start failed:", e)
+        raise
 
-    update_session(
-        session["session_id"],
-        current_stake,
-        peak,
-        lowest
-    )
-
-from repositories.session_repo import end_session as end_session_repo
-
-
-def close_session(session_id, ending_stake, reason):
-    end_session_repo(session_id, ending_stake, reason)
-    print("✅ Session closed")
+    finally:
+        cursor.close()
+        conn.close()

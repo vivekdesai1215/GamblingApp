@@ -1,9 +1,8 @@
 import random
 from config.db_config import get_connection
 
-from repositories.gambler_repo import get_gambler_by_id
-from repositories.session_repo import get_active_session
-from repositories.betting_preferences_repo import get_preferences_by_gambler_id
+from repositories.stake_transaction_repo import insert_stake_transaction
+from utils.transation_type import TransactionType
 
 
 def place_bet(gambler_id, amount):
@@ -54,10 +53,15 @@ def place_bet(gambler_id, amount):
             payout = amount
             new_stake = current_stake + payout
             result = "WIN"
+            transaction_type = TransactionType.BET_WIN
         else:
             payout = -amount
             new_stake = current_stake + payout
             result = "LOSS"
+            transaction_type = TransactionType.BET_LOSS
+
+        balance_before = current_stake
+        balance_after = new_stake
 
         # 6. Update gambler
         cursor.execute(
@@ -73,7 +77,21 @@ def place_bet(gambler_id, amount):
             session["session_id"], gambler_id, amount, result, payout
         ))
 
-        # 8. Update session
+        bet_id = cursor.lastrowid  # ✅ IMPORTANT
+
+        # 8. Insert stake transaction (NEW)
+        insert_stake_transaction(
+            gambler_id=gambler_id,
+            session_id=session["session_id"],
+            bet_id=bet_id,
+            transaction_type=transaction_type,
+            amount=amount,
+            balance_before=balance_before,
+            balance_after=balance_after,
+            conn=conn  # use same transaction
+        )
+
+        # 9. Update session
         peak = max(float(session["peak_stake"]), new_stake)
         lowest = min(float(session["lowest_stake"]), new_stake)
         games_played = session["games_played"] + 1
@@ -86,7 +104,7 @@ def place_bet(gambler_id, amount):
             WHERE session_id = %s
         """, (games_played, peak, lowest, session["session_id"]))
 
-        # 9. Stop conditions
+        # 10. Stop conditions
         starting_stake = float(session["starting_stake"])
         profit = new_stake - starting_stake
         loss = starting_stake - new_stake
@@ -102,7 +120,7 @@ def place_bet(gambler_id, amount):
         elif prefs["session_win_target"] and profit >= float(prefs["session_win_target"]):
             stop_reason = "WIN_TARGET"
 
-        # 10. End session if needed
+        # 11. End session if needed
         if stop_reason:
             cursor.execute("""
                 UPDATE sessions

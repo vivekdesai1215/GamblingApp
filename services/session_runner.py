@@ -1,10 +1,14 @@
 from services.bet_service import place_bet
 from repositories.gambler_repo import get_gambler_by_id
 from repositories.session_repo import get_active_session
+from utils.stake_history import print_stake_history
 
 
 def run_session(gambler_id, bet_amount):
     print("\n🎮 Starting Auto-Play Session\n")
+
+    session = get_active_session(gambler_id)
+    session_id = session["session_id"]
 
     while True:
         try:
@@ -18,8 +22,8 @@ def run_session(gambler_id, bet_amount):
             print("⚠️ Error during session:", e)
             break
 
-    # Print summary
-    print_summary(gambler_id)
+    # ✅ ADD HERE
+    print_stake_history(session_id)
 
 def print_summary(gambler_id):
     gambler = get_gambler_by_id(gambler_id)

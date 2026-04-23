@@ -1,39 +1,40 @@
 from config.db_config import get_connection
 
 
-def create_session(session):
-    conn = get_connection()
+def create_session(session, conn=None):
+    close_conn = False
+
+    if conn is None:
+        conn = get_connection()
+        close_conn = True
+
     cursor = conn.cursor()
 
     query = """
-    INSERT INTO sessions (
-        gambler_id, status, starting_stake,
-        peak_stake, lowest_stake,
-        max_games, games_played,
-        total_pause_seconds, started_at
-    )
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO sessions (
+            gambler_id, starting_stake, ending_stake,
+            peak_stake, lowest_stake,
+            max_games, games_played, status
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, 0, 'ACTIVE')
     """
 
     values = (
         session.gambler_id,
-        session.status,
         session.starting_stake,
-        session.peak_stake,
-        session.lowest_stake,
-        session.max_games,
-        session.games_played,
-        session.total_pause_seconds,
-        session.started_at
+        session.starting_stake,
+        session.starting_stake,
+        session.starting_stake,
+        session.max_games
     )
 
     cursor.execute(query, values)
-    conn.commit()
-
     session_id = cursor.lastrowid
 
-    cursor.close()
-    conn.close()
+    if close_conn:
+        conn.commit()
+        cursor.close()
+        conn.close()
 
     return session_id
 

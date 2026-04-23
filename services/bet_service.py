@@ -5,7 +5,7 @@ from repositories.stake_transaction_repo import insert_stake_transaction
 from utils.transation_type import TransactionType
 
 
-def place_bet(gambler_id, amount):
+def place_bet(gambler_id, amount,outcome_strategy,odds_strategy):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -46,14 +46,14 @@ def place_bet(gambler_id, amount):
         if amount < float(prefs["min_bet"]) or amount > float(prefs["max_bet"]):
             raise ValueError("Invalid bet amount")
 
-        # 5. Outcome
-        is_win = random.choice([True, False])
+        #Outcome
+        result = outcome_strategy.determine_outcome()
 
-        if is_win:
-            payout = amount
+        if result=="WIN":
+            payout = odds_strategy.calculate_payout(amount)
             new_stake = current_stake + payout
-            result = "WIN"
             transaction_type = TransactionType.BET_WIN
+            result = "WIN"
         else:
             payout = -amount
             new_stake = current_stake + payout
@@ -136,8 +136,10 @@ def place_bet(gambler_id, amount):
         print(f"🎲 {result} | Stake: {new_stake}")
 
         return {
-            "result": result,          # WIN / LOSS
-            "stop": True if stop_reason else False
+            "result": result,
+            "payout": payout,
+            "new_stake": new_stake,
+            "stop": bool(stop_reason)
         }
 
     except Exception as e:

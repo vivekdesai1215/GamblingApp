@@ -5,7 +5,6 @@ from services.bet_service import place_bet
 from strategies.report_service import print_session_summary
 from utils.stake_history import print_stake_history
 
-
 # Strategy runner
 from services.run_session_with_strategy import run_session_with_strategy
 
@@ -16,6 +15,8 @@ from strategies.martingale_strategy import MartingaleStrategy
 from strategies.reverse_martingale_strategy import ReverseMartingaleStrategy
 from strategies.fibonacci_strategy import FibonacciStrategy
 from strategies.dalembert_strategy import DAlembertStrategy
+from utils.win_loss_stats import WinLossStats
+
 
 
 def main():
@@ -81,8 +82,44 @@ def main():
     # -----------------------------
     # MODE SELECTION
     # -----------------------------
+
+    print("\nChoose Outcome Strategy:")
+    print("1. Random (50-50)")
+    print("2. Weighted (house edge)")
+
+    choice = input("Enter choice: ")
+
+    from utils.outcome_strategy import RandomOutcomeStrategy, WeightedOutcomeStrategy
+
+    if choice == "1":
+        outcome_strategy = RandomOutcomeStrategy()
+    elif choice == "2":
+        prob = float(input("Enter win probability (e.g. 0.48): "))
+        outcome_strategy = WeightedOutcomeStrategy(prob)
+    else:
+        print("Invalid choice")
+        return
+    
+    print("\nChoose Odds Type:")
+    print("1. Fixed (2x)")
+    print("2. Probability Based")
+    odds_choice = input("Enter choice: ")
+    from utils.odds import FixedOdds, ProbabilityBasedOdds
+
+    if odds_choice == "1":
+        multiplier = float(input("Enter multiplier (e.g. 2): "))
+        odds_strategy = FixedOdds(multiplier)
+
+    elif odds_choice == "2":
+        prob = float(input("Enter win probability (same as outcome): "))
+        odds_strategy = ProbabilityBasedOdds(prob)
+    else:
+        print("Invalid choice")
+        return
+    
     mode = input("\nChoose mode (1 = manual, 2 = strategy): ")
 
+    stats = WinLossStats()
     # =============================
     # MANUAL MODE (UPDATED)
     # =============================
@@ -109,8 +146,8 @@ def main():
                 else:
                     bet = float(action)
 
-                    status = place_bet(gambler_id, bet)
-
+                    status = place_bet(gambler_id, bet,outcome_strategy,odds_strategy)
+                    stats.update(status["result"], status["payout"])
                     if status["stop"]:
                         print("🛑 Session ended")
                         break
@@ -120,7 +157,8 @@ def main():
                 break
         
         print_stake_history(session_id)
-        print_session_summary(session_id)
+        print("\n📊 Session Summary:")
+        print(stats.get_summary())
 
     # =============================
     # STRATEGY MODE (UPDATED)
@@ -165,10 +203,11 @@ def main():
             return
 
         # run strategy session (IMPORTANT: pass session_id)
-        run_session_with_strategy(gambler_id, strategy, session_id)
+        run_session_with_strategy(gambler_id, strategy, session_id,outcome_strategy,odds_strategy,stats)
 
         print_stake_history(session_id)
-        print_session_summary(session_id)
-
+        # print_session_summary(session_id)
+        print("\n📊 Session Summary:")
+        print(stats.get_summary())
 if __name__ == "__main__":
     main()

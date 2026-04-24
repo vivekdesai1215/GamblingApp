@@ -7,7 +7,6 @@ from utils.stake_history import print_stake_history
 
 from services.run_session_with_strategy import run_session_with_strategy
 
-# Strategies
 from strategies.fixed_strategy import FixedAmountStrategy
 from strategies.percentage_strategy import PercentageStrategy
 from strategies.martingale_strategy import MartingaleStrategy
@@ -15,15 +14,17 @@ from strategies.reverse_martingale_strategy import ReverseMartingaleStrategy
 from strategies.fibonacci_strategy import FibonacciStrategy
 from strategies.dalembert_strategy import DAlembertStrategy
 from utils.win_loss_stats import WinLossStats
+from utils.outcome_strategy import RandomOutcomeStrategy, WeightedOutcomeStrategy
+from utils.odds import FixedOdds, ProbabilityBasedOdds
+
 
 
 
 def main():
     print("🎰 Welcome to Gambling App\n")
 
-    # -----------------------------
-    # USER INPUT
-    # -----------------------------
+   
+    # INPUT FOR GAMBLER CREATION
     username = input("Enter username: ")
     email = input("Enter email: ")
     full_name = input("Enter full name: ")
@@ -35,9 +36,8 @@ def main():
     loss_limit = float(input("Session loss limit: "))
     win_target = float(input("Session win target: "))
 
-    # -----------------------------
+
     # CREATE GAMBLER
-    # -----------------------------
     gambler_data = {
         "username": username,
         "email": email,
@@ -49,13 +49,11 @@ def main():
     }
 
     create_gambler(gambler_data)
-
     gambler = get_gambler_profile(username)
     gambler_id = gambler["gambler_id"]
 
-    # -----------------------------
+
     # CREATE PREFERENCES
-    # -----------------------------
     preferences_data = {
         "gambler_id": gambler_id,
         "min_bet": min_bet,
@@ -69,26 +67,23 @@ def main():
 
     create_preferences(preferences_data)
 
-    # -----------------------------
+
     # START SESSION
-    # -----------------------------
     session_id = start_session(
         gambler_id=gambler_id,
         current_stake=gambler["current_stake"],
         max_games=max_games
     )
 
-    # -----------------------------
-    # MODE SELECTION
-    # -----------------------------
+
+
+    # OUTCOME STRATEGY SELECTION
 
     print("\nChoose Outcome Strategy:")
     print("1. Random (50-50)")
     print("2. Weighted (house edge)")
 
     choice = input("Enter choice: ")
-
-    from utils.outcome_strategy import RandomOutcomeStrategy, WeightedOutcomeStrategy
 
     if choice == "1":
         outcome_strategy = RandomOutcomeStrategy()
@@ -99,11 +94,11 @@ def main():
         print("Invalid choice")
         return
     
+    # ODDS SELECTION
     print("\nChoose Odds Type:")
     print("1. Fixed (2x)")
     print("2. Probability Based")
     odds_choice = input("Enter choice: ")
-    from utils.odds import FixedOdds, ProbabilityBasedOdds
 
     if odds_choice == "1":
         multiplier = float(input("Enter multiplier (e.g. 2): "))
@@ -116,12 +111,14 @@ def main():
         print("Invalid choice")
         return
     
-    mode = input("\nChoose mode (1 = manual, 2 = strategy): ")
 
+    # BETTING MODE SELECTION
+    mode = input("\nChoose mode (1 = manual, 2 = strategy): ")
     stats = WinLossStats()
-    # =============================
+
+
     # MANUAL MODE (UPDATED)
-    # =============================
+
     if mode == "1":
         while True:
             try:
@@ -144,7 +141,6 @@ def main():
                 # BET
                 else:
                     bet = float(action)
-
                     status = place_bet(gambler_id, bet,outcome_strategy,odds_strategy)
                     stats.update(status["result"], status["payout"])
                     if status["stop"]:
@@ -159,9 +155,9 @@ def main():
         print("\n📊 Session Summary:")
         print(stats.get_summary())
 
-    # =============================
+
     # STRATEGY MODE (UPDATED)
-    # =============================
+
     else:
         print("\nChoose Strategy:")
         print("1. Fixed")
@@ -201,12 +197,12 @@ def main():
             print("Invalid choice")
             return
 
-        # run strategy session (IMPORTANT: pass session_id)
         run_session_with_strategy(gambler_id, strategy, session_id,outcome_strategy,odds_strategy,stats)
 
         print_stake_history(session_id)
-        # print_session_summary(session_id)
         print("\n📊 Session Summary:")
         print(stats.get_summary())
+
+
 if __name__ == "__main__":
     main()

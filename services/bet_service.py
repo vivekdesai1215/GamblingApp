@@ -3,6 +3,7 @@ from config.db_config import get_connection
 
 from repositories.stake_transaction_repo import insert_stake_transaction
 from utils.transation_type import TransactionType
+from utils.validators import validate_bet_amount
 
 # Places a Bet
 def place_bet(gambler_id, amount,outcome_strategy,odds_strategy):
@@ -40,11 +41,12 @@ def place_bet(gambler_id, amount,outcome_strategy,odds_strategy):
         prefs = cursor.fetchone()
 
         # 4. Validation
-        if amount > current_stake:
-            raise ValueError("Insufficient balance")
-
-        if amount < float(prefs["min_bet"]) or amount > float(prefs["max_bet"]):
-            raise ValueError("Invalid bet amount")
+        validate_bet_amount(
+            amount,
+            current_stake,
+            float(prefs["min_bet"]),
+            float(prefs["max_bet"])
+        )
 
         #Outcome
         result = outcome_strategy.determine_outcome()
@@ -77,7 +79,7 @@ def place_bet(gambler_id, amount,outcome_strategy,odds_strategy):
             session["session_id"], gambler_id, amount, result, payout
         ))
 
-        bet_id = cursor.lastrowid  # ✅ IMPORTANT
+        bet_id = cursor.lastrowid
 
         # 8. Insert stake transaction (NEW)
         insert_stake_transaction(

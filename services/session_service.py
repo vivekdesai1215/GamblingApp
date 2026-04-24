@@ -27,6 +27,7 @@ def start_session(gambler_id, current_stake, max_games=None):
 
         session_id = create_session(session, conn=conn)  # pass conn
 
+
         # 3. Insert INITIAL stake transaction
         insert_stake_transaction(
             gambler_id=gambler_id,
@@ -125,11 +126,7 @@ from repositories.gambler_repo import get_gambler_by_id
 
 
 def close_session(session_id, gambler_id=None):
-    """
-    Close session manually
-    """
 
-    # if gambler_id is provided → get latest stake
     ending_stake = None
 
     if gambler_id:
@@ -137,7 +134,6 @@ def close_session(session_id, gambler_id=None):
         if gambler:
             ending_stake = float(gambler["current_stake"])
 
-    # fallback: repo handles None safely (or DB default)
     end_session_repo(session_id, ending_stake, "MANUAL")
 
     print("🛑 Session closed manually")
